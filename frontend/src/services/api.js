@@ -153,5 +153,5 @@ export const api = {
   getUserStats: (userId) => request(`/stats/${userId}`),
 
   // ─── Reset data ───────────────────────────────────────────────────────────
-  resetData: () => request("/reset-data", { method: "POST" }),
+  // resetData: () => request("/reset-data", { method: "POST" }),
 };
