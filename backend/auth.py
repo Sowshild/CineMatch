@@ -8,7 +8,8 @@ Provides:
 
 import bcrypt
 import jwt
-from datetime import datetime, timedelta
+import os
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -16,7 +17,10 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 
-SECRET_KEY = "cinematch-jwt-secret-key-production-strength-2026"
+SECRET_KEY = os.getenv("SECRET_KEY")
+
+if not SECRET_KEY:
+    raise RuntimeError("SECRET_KEY environment variable is not configured")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days token validity
 
@@ -39,14 +43,24 @@ def get_password_hash(password: str) -> str:
     return bcrypt.hashpw(password.encode("utf-8"), salt).decode("utf-8")
 
 
+# def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+#     """Encodes a JWT payload with an expiration timestamp."""
+#     to_encode = data.copy()
+#     if expires_delta:
+#         expire = datetime.utcnow() + expires_delta
+#     else:
+#         expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+#     to_encode.update({"exp": expire})
+#     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
-    """Encodes a JWT payload with an expiration timestamp."""
     to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+
+    expire = datetime.now(timezone.utc) + (
+        expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    )
+
     to_encode.update({"exp": expire})
+
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
@@ -76,7 +90,7 @@ def get_current_user(token: Optional[str] = Depends(oauth2_scheme), db: Session 
         )
     
     from models import User
-    user_id = payload.get("sub")
+    user_id = int(payload.get("sub"))
     user = db.query(User).filter(User.id == int(user_id)).first()
     if not user:
         raise HTTPException(

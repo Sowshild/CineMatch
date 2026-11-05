@@ -3,7 +3,9 @@ CineMatch FastAPI Application
 Full-featured RESTful API for movie discovery, personalized recommendations,
 ratings management, user preferences, and favorites.
 """
+from dotenv import load_dotenv
 
+load_dotenv()
 from contextlib import asynccontextmanager
 from typing import List, Optional
 from fastapi import FastAPI, Depends, HTTPException, Query, status
@@ -52,9 +54,30 @@ app = FastAPI(
 )
 
 # Enable CORS for frontend development
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=["*"],
+#     allow_credentials=True,
+#     allow_methods=["*"],
+#     allow_headers=["*"],
+# )
+
+import os
+
+frontend_url = os.getenv(
+    "FRONTEND_URL",
+    "http://localhost:5173"
+)
+
+allowed_origins = [
+    url.strip()
+    for url in frontend_url.split(",")
+    if url.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -743,8 +766,8 @@ def get_user_stats(user_id: int, db: Session = Depends(get_db)):
     )
 
 
-@app.post("/api/reset-data", tags=["Maintenance"])
-def reset_seed_data(db: Session = Depends(get_db)):
-    """Reset database to default seed movies, demo users, and ratings."""
-    res = seed_database(db, force_reset=True)
-    return res
+# @app.post("/api/reset-data", tags=["Maintenance"])
+# def reset_seed_data(db: Session = Depends(get_db)):
+#     """Reset database to default seed movies, demo users, and ratings."""
+#     res = seed_database(db, force_reset=True)
+#     return res
